@@ -1,0 +1,49 @@
+#cloud-config
+autoinstall:
+  version: 1
+  # interactive-sections:  # Uncomment these two lines to make storage interactive
+  #  - storage
+  #  - apt
+  storage:  # This will make the largest disk partitioned with lvm and make the default Ubuntu size.
+    layout:
+      name: lvm
+      match:
+        size: largest  
+  locale: en_US.UTF-8
+  keyboard:
+    layout: us
+  identity:
+    hostname: ubuntu-server
+    # the commmand to generate a hashed password is "mkpasswd --method=SHA-512 <desired_password>
+    password: $6$2blElubh8W50f44i$vAeL2tfWll69S1OgDgghjSh/g9HuMXABDHQLJmhUeys5lnn.Y/MBJjq63Zrn5ZLk.xiCQnJykpCGD2njro2Dh0
+    username: setup-admin
+    ssh_authorized_keys:
+     - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPbQ9sP2gfDUL/kPwGl8qALwz/+nQXOwOekOUo/6tFT2 example@example.local
+  ssh:
+    allow-pw: true
+    install-server: true
+  apt:
+    primary:
+      - arches: [default]
+        uri: http://us.archive.ubuntu.com/ubuntu/
+  packages: 
+    - build-essential
+    - network-manager
+    - vim
+    - htop
+    - dkms
+    - iftop
+    - iotop
+    - net-tools
+  package_update: true
+  package_upgrade: true
+  late-commands:
+    # move existing config out of the way
+    # Create a new netplan and enable it
+    - curtin in-target --target /target netplan generate
+    - curtin in-target --target /target netplan apply
+  user-data: # Commands here run during first boot (cannot be interactive)
+   runcmd:
+   # extends the default disk to the full size of the disk duing first boot
+     - [lvextend, -l, +100%FREE,  /dev/ubuntu-vg/ubuntu-lv]
+     - [resize2fs, /dev/mapper/ubuntu--vg-ubuntu--lv]
